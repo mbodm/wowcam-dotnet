@@ -165,4 +165,12 @@ public sealed class DomainLogicDefault(
             throw new InvalidOperationException("Error occurred while deploying the addons (see log file for details).");
         }
     }
+
+    private void Cleanup(string tempFolder)
+    {
+        if (Directory.Exists(tempFolder))
+        {
+            Directory.Delete(tempFolder, true);
+        }
+    }
 }
