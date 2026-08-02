@@ -28,6 +28,13 @@ try
     var domainLogic = new DomainLogicDefault(logger, configReader, configValidator, apiClient, addonsProcessing);
 
     var cts = new CancellationTokenSource();
+
+    Console.CancelKeyPress += async (sender, e) =>
+    {
+        cts.Cancel();
+        Console.WriteLine("Wird beendet...");
+    };
+
     var result = await domainLogic.RunAsync(addonNames =>
     {
         Console.Write($"Processing {addonNames.Count()} addons ...");
