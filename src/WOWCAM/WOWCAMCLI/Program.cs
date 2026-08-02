@@ -27,7 +27,21 @@ try
     var addonsProcessing = new AddonsProcessingDefault(apiClient, smartUpdate, httpClientProvider);
     var domainLogic = new DomainLogicDefault(logger, configReader, configValidator, apiClient, addonsProcessing);
 
+
     var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += async (sender, e) =>
+    {
+        e.Cancel = true;
+
+        Console.WriteLine();
+        Console.WriteLine();
+        Console.WriteLine("Info: Program was cancelled by user.");
+        Console.WriteLine();
+        Console.WriteLine("Cancelling all tasks now....");
+
+        cts.Cancel();
+    };
+
     var result = await domainLogic.RunAsync(addonNames =>
     {
         Console.Write($"Processing {addonNames.Count()} addons ...");
@@ -50,6 +64,15 @@ try
     Environment.Exit(0);
 
     //await smartUpdateFeature.SaveAsync().ConfigureAwait(false);
+}
+
+catch (OperationCanceledException)
+{
+    Console.WriteLine();
+    Console.WriteLine("Cancelled.");
+    Console.WriteLine();
+    Console.WriteLine("Have a nice day.");
+    Environment.Exit(255);
 }
 catch (Exception ex)
 {

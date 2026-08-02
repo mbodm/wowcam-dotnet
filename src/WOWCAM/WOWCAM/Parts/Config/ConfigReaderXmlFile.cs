@@ -6,6 +6,8 @@ public sealed class ConfigReaderXmlFile(string xmlFile) : IConfigReader
 {
     private readonly string xmlFile = xmlFile;
 
+    public string StorageInformation => xmlFile;
+
     public async Task<ConfigData> ReadAsync(CancellationToken cancellationToken = default)
     {
         using var fileStream = new FileStream(xmlFile, FileMode.Open, FileAccess.Read, FileShare.Read);

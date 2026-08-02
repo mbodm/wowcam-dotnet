@@ -20,14 +20,14 @@ public sealed class DomainLogicDefault(
     private readonly IAddonsProcessing addonsProcessing = addonsProcessing ?? throw new ArgumentNullException(nameof(addonsProcessing));
 
     private readonly string workFolder = AppHelper.GetApplicationExecutableFolder();
-    
+
     public async Task<DomainLogicResult> RunAsync(Action<IEnumerable<string>>? preflight = null, IProgress<byte>? progress = null, CancellationToken cancellationToken = default)
     {
         var configData = await LoadConfigAsync(cancellationToken).ConfigureAwait(false);
         apiClient.ApiToken = configData.ApiToken == "12345" ? "a0293285-b9a3-41b8-bb04-52d505eeadde" : configData.ApiToken;
 
         var deployFolder = await CreateFolderStructureAsync(cancellationToken).ConfigureAwait(false);
-        
+
         var updatedAddons = 0;
         var durationInMilliseconds = 0;
         try
@@ -52,17 +52,29 @@ public sealed class DomainLogicDefault(
 
         await DeployAddonsAsync(deployFolder, configData.TargetFolder, cancellationToken).ConfigureAwait(false);
 
+        var tempFolder = Path.Combine(workFolder, "Temp");
+        if (Directory.Exists(tempFolder))
+        {
+            Directory.Delete(tempFolder, true);
+        }
+
+
         return new DomainLogicResult(updatedAddons, durationInMilliseconds);
     }
 
     private async Task<ConfigData> LoadConfigAsync(CancellationToken cancellationToken = default)
     {
+        if (configReader is ConfigReaderXmlFile && !File.Exists(configReader.StorageInformation))
+        {
+            throw new InvalidOperationException("Could not found config file (wowcam.xml) in this folder.");
+        }
+
         ConfigData configData;
         try
         {
             configData = await configReader.ReadAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.Log(ex);
             throw new InvalidOperationException("Error occurred while reading configuration (see log file for details).");
@@ -72,7 +84,7 @@ public sealed class DomainLogicDefault(
         {
             configValidator.Validate(configData);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.Log(ex);
             throw new InvalidOperationException("Error occurred while validating configuration (see log file for details).");
@@ -113,7 +125,7 @@ public sealed class DomainLogicDefault(
             }
             else
             {
-                await FileSystemHelper.DeleteFolderContentAsync(downloadFolder, cancellationToken).ConfigureAwait(false);
+                await FileSystemHelper.DeleteFolderContentAsync(unzipFolder, cancellationToken).ConfigureAwait(false);
             }
 
             var deployFolder = Path.Combine(unzipFolder, "All");
@@ -130,7 +142,7 @@ public sealed class DomainLogicDefault(
 
             return deployFolder;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.Log(ex);
             throw new InvalidOperationException("Error occurred while creating the folder structure (see log file for details).");
@@ -147,7 +159,7 @@ public sealed class DomainLogicDefault(
             await FileSystemHelper.DeleteFolderContentAsync(targetFolder, cancellationToken).ConfigureAwait(false);
             await FileSystemHelper.MoveFolderContentAsync(deployFolder, targetFolder, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.Log(ex);
             throw new InvalidOperationException("Error occurred while deploying the addons (see log file for details).");
