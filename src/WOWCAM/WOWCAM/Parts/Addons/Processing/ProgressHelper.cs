@@ -1,6 +1,6 @@
 namespace WOWCAM.Parts.Addons.Processing;
 
-// Encapsulates the entire progress handling for the IAddonsProcessing default implementation,
+// Encapsulates the entire progress handling for the IAddonsProcessor default implementation,
 // so that class itself stays free of progress math and only calls a few descriptive methods.
 //
 // The whole idea in one paragraph:
@@ -11,7 +11,7 @@ namespace WOWCAM.Parts.Addons.Processing;
 //
 //   overallPercent = 100 * (sum of all addon values) / (N * 200)
 //
-//   One plain uint slot per addon in a fixed-size array (index-aligned with the addon list).
+//   One plain int slot per addon in a fixed-size array (index-aligned with the addon list).
 //   Each concurrent addon task, in ProcessAddonsAsync() method, touches ONLY its own slot.
 //
 // Two things make the reported numbers correct and clean:

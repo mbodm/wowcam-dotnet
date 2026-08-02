@@ -2,7 +2,7 @@
 
 public interface ISmartUpdate
 {
-    Task<ushort> LoadAsync(CancellationToken cancellationToken = default);
+    Task<int> LoadAsync(CancellationToken cancellationToken = default);
     Task SaveAsync(CancellationToken cancellationToken = default);
     
     bool AddonExists(string addonName, string downloadUrl);

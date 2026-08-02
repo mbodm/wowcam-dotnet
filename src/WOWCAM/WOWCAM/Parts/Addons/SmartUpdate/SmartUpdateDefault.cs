@@ -17,7 +17,7 @@ public sealed class SmartUpdateDefault : ISmartUpdate
         throw new NotImplementedException();
     }
 
-    public Task<ushort> LoadAsync(CancellationToken cancellationToken = default)
+    public Task<int> LoadAsync(CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }

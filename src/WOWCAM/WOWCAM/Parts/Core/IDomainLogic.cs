@@ -2,5 +2,5 @@
 
 public interface IDomainLogic
 {
-    Task<DomainLogicResult> RunAsync(Action<IEnumerable<string>>? preflight = null, IProgress<byte>? progress = null, CancellationToken cancellationToken = default);
+    Task<DomainLogicResult> RunAsync(Action<IEnumerable<string>>? preflight = default, IProgress<byte>? progress = default, CancellationToken cancellationToken = default);
 }
