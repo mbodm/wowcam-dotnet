@@ -14,11 +14,11 @@ Console.WriteLine();
 
 try
 {
-    var exeFolder = AppHelper.GetApplicationExecutableFolder();
+    var workFolder = AppHelper.GetApplicationExecutableFolder();
 
-    var logFile = Path.Combine(exeFolder, "WOWCAM.log");
+    var logFile = Path.Combine(workFolder, "WOWCAM.log");
     var logger = new LoggerTextFile(logFile);
-    var xmlFile = Path.Combine(exeFolder, "wowcam.xml");
+    var xmlFile = Path.Combine(workFolder, "wowcam.xml");
     var configReader = new ConfigReaderXmlFile(xmlFile);
     var configValidator = new ConfigValidatorDefault();
     using var httpClient = new HttpClient();
@@ -28,30 +28,26 @@ try
     var addonsProcessing = new AddonsProcessingDefault(apiClient, smartUpdate, httpClientProvider);
     var domainLogic = new DomainLogicDefault(logger, configReader, configValidator, addonsProcessing);
 
+
     var cts = new CancellationTokenSource();
     var cancellationToken = cts.Token;
 
-    var configData = await domainLogic.LoadConfigAsync(cancellationToken);
-    apiClient.ApiToken = configData.ApiToken == "12345" ? "a0293285-b9a3-41b8-bb04-52d505eeadde" : configData.ApiToken;
-
-    var workFolder = AppHelper.GetApplicationExecutableFolder();
-    var deployFolder = await domainLogic.InitAsync(workFolder, cancellationToken).ConfigureAwait(false);
-
     var sw = Stopwatch.StartNew();
-
-    var updatedAddons = await domainLogic.ProcessAddonsAsync(addonNames =>
+    var updatedAddons = await domainLogic.RunAsync(addonNames =>
     {
-        Console.Write($"Processing {addonNames.Count()} addons...");
+        Console.Write($"Processing {addonNames.Count()} addons ...");
     },
-    new Progress<byte>(percent => 
+    new Progress<byte>(percent =>
     {
-        if (percent % 2 == 0) Console.Write('.');
-
-    }), cts.Token).ConfigureAwait(false);
+        if (percent % 2 == 0)
+        {
+            Console.Write('.');
+        }
+    }),
+    cts.Token).ConfigureAwait(false);
+    sw.Stop();
 
     await domainLogic.DeployAddonsAsync(deployFolder, configData.TargetFolder, cancellationToken).ConfigureAwait(false);
-
-    sw.Stop();
 
     Console.WriteLine();
     Console.WriteLine();
@@ -59,7 +55,6 @@ try
     Console.WriteLine();
 
     //await smartUpdateFeature.SaveAsync().ConfigureAwait(false);
-
 }
 catch (Exception ex)
 {

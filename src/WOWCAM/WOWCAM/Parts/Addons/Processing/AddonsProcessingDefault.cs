@@ -11,7 +11,7 @@ public sealed class AddonsProcessingDefault(IApiClient apiClient, ISmartUpdate s
     private readonly ISmartUpdate smartUpdate = smartUpdate;
     private readonly IHttpClientProvider httpClientProvider = httpClientProvider;
 
-    public async Task<uint> ProcessAddonsAsync(IEnumerable<string> addonNames, string workFolder, IProgress<byte>? progress = default, CancellationToken cancellationToken = default)
+    public async Task<int> ProcessAddonsAsync(IEnumerable<string> addonNames, string workFolder, IProgress<byte>? progress = default, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(addonNames);
         ArgumentException.ThrowIfNullOrWhiteSpace(workFolder);
@@ -51,7 +51,7 @@ public sealed class AddonsProcessingDefault(IApiClient apiClient, ISmartUpdate s
 
         // Concurrently do for every addon -> "Use SmartUpdate" OR "Download & Unzip"
 
-        uint updatedAddonsCounter = 0;
+        var updatedAddonsCounter = 0;
 
         var tasks = addons.Select(async (addon, index) =>
         {

@@ -1,21 +1,63 @@
-﻿using WOWCAM.Parts.Addons.Processing;
+﻿using System.Diagnostics;
+using WOWCAM.Parts.Addons.ApiClient;
+using WOWCAM.Parts.Addons.Processing;
 using WOWCAM.Parts.Config;
 using WOWCAM.Parts.Helper;
 using WOWCAM.Parts.Logging;
 
 namespace WOWCAM.Parts.Core;
 
-public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReader, IConfigValidator configValidator, IAddonsProcessing addonsProcessing) : IDomainLogic
+public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReader, IConfigValidator configValidator,
+    IApiClient apiClient, IAddonsProcessing addonsProcessing) : IDomainLogic
 {
     private readonly IConfigReader configReader = configReader ?? throw new ArgumentNullException(nameof(configReader));
     private readonly IConfigValidator configValidator = configValidator ?? throw new ArgumentNullException(nameof(configValidator));
     private readonly IAddonsProcessing addonsProcessing = addonsProcessing ?? throw new ArgumentNullException(nameof(addonsProcessing));
 
-    private ConfigData? configData = null;
-    private string workFolder = string.Empty;
+    private readonly string workFolder = AppHelper.GetApplicationExecutableFolder();
 
-    public async Task<ConfigData> LoadConfigAsync(CancellationToken cancellationToken = default)
+  
+
+    public async Task<DomainLogicResult> RunAsync(Action<IEnumerable<string>>? preflight = null, IProgress<byte>? progress = null, CancellationToken cancellationToken = default)
     {
+        var configData = await LoadConfigAsync(cancellationToken).ConfigureAwait(false);
+        apiClient.ApiToken = configData.ApiToken == "12345" ? "a0293285-b9a3-41b8-bb04-52d505eeadde" : configData.ApiToken;
+
+        var deployFolder = await CreateFolderStructureAsync(cancellationToken).ConfigureAwait(false);
+
+
+
+        var updatedAddons = 0;
+        var durationInMilliseconds = 0;
+        try
+        {
+            var workFolder = AppHelper.GetApplicationExecutableFolder();
+            var addonNames = configData!.AddonUrls.Select(CurseHelper.GetAddonSlugNameFromAddonPageUrl);
+            preflight?.Invoke(addonNames);
+
+            var stopwatch = Stopwatch.StartNew();
+            updatedAddons = await addonsProcessing.ProcessAddonsAsync(addonNames, workFolder, progress, cancellationToken).ConfigureAwait(false);
+            stopwatch.Stop();
+
+            durationInMilliseconds = stopwatch.ElapsedMilliseconds > int.MaxValue ? int.MaxValue : (int)stopwatch.ElapsedMilliseconds;
+        }
+        catch (Exception ex)
+        {
+            logger.Log(ex);
+            throw new InvalidOperationException("Error occurred while processing addons (see log file for details).");
+        }
+
+        await Task.Delay(1000, cancellationToken).ConfigureAwait(false); // Give async progress time to finish
+
+        await DeployAddonsAsync(deployFolder, configData.TargetFolder, cancellationToken).ConfigureAwait(false);
+
+
+        return new DomainLogicResult(updatedAddons, durationInMilliseconds);
+    }
+
+    private async Task<ConfigData> LoadConfigAsync(CancellationToken cancellationToken = default)
+    {
+        ConfigData configData;
         try
         {
             configData = await configReader.ReadAsync(cancellationToken).ConfigureAwait(false);
@@ -39,30 +81,12 @@ public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReade
         return configData;
     }
 
-    public HttpClient CreateHttpClient()
+
+
+    private async Task<string> CreateFolderStructureAsync(CancellationToken cancellationToken = default)
     {
-        var httpClient = new HttpClient();
-
-        // The HttpClient shall look a bit more like a Chrome Browser
-
-        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36");
-        httpClient.DefaultRequestHeaders.Accept.ParseAdd("*/*");
-        httpClient.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br, zstd");
-        httpClient.DefaultRequestHeaders.AcceptLanguage.ParseAdd("de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7");
-        httpClient.DefaultRequestHeaders.Add("sec-ch-ua", "\"Chromium\";v=\"150\", \"Not:A-Brand\";v=\"99\", \"Google Chrome\";v=\"150\"");
-        httpClient.DefaultRequestHeaders.Add("sec-ch-ua-mobile", "?0");
-        httpClient.DefaultRequestHeaders.Add("sec-ch-ua-platform", "\"Windows\"");
-
-        return httpClient;
-    }
-
-    public async Task<string> InitAsync(string workFolder, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(workFolder);
-
         try
         {
-            this.workFolder = workFolder;
             if (!Directory.Exists(workFolder))
             {
                 Directory.CreateDirectory(workFolder);
@@ -115,7 +139,7 @@ public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReade
         }
     }
 
-    public async Task DeployAddonsAsync(string deployFolder, string targetFolder, CancellationToken cancellationToken = default)
+    private async Task DeployAddonsAsync(string deployFolder, string targetFolder, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deployFolder);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetFolder);
@@ -129,32 +153,6 @@ public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReade
         {
             logger.Log(ex);
             throw new InvalidOperationException("Error occurred while deploying the addons (see log file for details).");
-        }
-    }
-
-    public void CleanUp(string tempFolder)
-    {
-        if (Directory.Exists(tempFolder))
-        {
-            Directory.Delete(tempFolder, true);
-        }
-    }
-
-    public async Task<uint> ProcessAddonsAsync(Action<IEnumerable<string>>? preProgress = null, IProgress<byte>? progress = null, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            var workFolder = AppHelper.GetApplicationExecutableFolder();
-            var addonNames = configData!.AddonUrls.Select(CurseHelper.GetAddonSlugNameFromAddonPageUrl);
-            preProgress?.Invoke(addonNames);
-            var updatedAddons = await addonsProcessing.ProcessAddonsAsync(addonNames, workFolder, progress, cancellationToken).ConfigureAwait(false);
-            await Task.Delay(1000, cancellationToken).ConfigureAwait(false); // Give async progress time to finish
-            return updatedAddons;
-        }
-        catch (Exception ex)
-        {
-            logger.Log(ex);
-            throw new InvalidOperationException("Error occurred while processing addons (see log file for details).");
         }
     }
 }
