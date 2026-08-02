@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="WOWCAM/WOWCAM.csproj" />
+  <Project Path="WOWCAMCLI/WOWCAMCLI.csproj" />
+  <Project Path="WOWCAMWINUI/WOWCAMWINUI.csproj" />
+</Solution>
