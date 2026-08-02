@@ -7,26 +7,27 @@ using WOWCAM.Parts.Logging;
 
 namespace WOWCAM.Parts.Core;
 
-public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReader, IConfigValidator configValidator,
-    IApiClient apiClient, IAddonsProcessing addonsProcessing) : IDomainLogic
+public sealed class DomainLogicDefault(
+    ILogger logger,
+    IConfigReader configReader,
+    IConfigValidator configValidator,
+    IApiClient apiClient,
+    IAddonsProcessing addonsProcessing) : IDomainLogic
 {
+    private readonly ILogger logger = logger ?? throw new ArgumentNullException(nameof(configReader));
     private readonly IConfigReader configReader = configReader ?? throw new ArgumentNullException(nameof(configReader));
     private readonly IConfigValidator configValidator = configValidator ?? throw new ArgumentNullException(nameof(configValidator));
     private readonly IAddonsProcessing addonsProcessing = addonsProcessing ?? throw new ArgumentNullException(nameof(addonsProcessing));
 
     private readonly string workFolder = AppHelper.GetApplicationExecutableFolder();
-
-  
-
+    
     public async Task<DomainLogicResult> RunAsync(Action<IEnumerable<string>>? preflight = null, IProgress<byte>? progress = null, CancellationToken cancellationToken = default)
     {
         var configData = await LoadConfigAsync(cancellationToken).ConfigureAwait(false);
         apiClient.ApiToken = configData.ApiToken == "12345" ? "a0293285-b9a3-41b8-bb04-52d505eeadde" : configData.ApiToken;
 
         var deployFolder = await CreateFolderStructureAsync(cancellationToken).ConfigureAwait(false);
-
-
-
+        
         var updatedAddons = 0;
         var durationInMilliseconds = 0;
         try
@@ -44,13 +45,12 @@ public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReade
         catch (Exception ex)
         {
             logger.Log(ex);
-            throw new InvalidOperationException("Error occurred while processing addons (see log file for details).");
+            throw new InvalidOperationException("Error occurred while processing the addons (see log file for details).");
         }
 
-        await Task.Delay(1000, cancellationToken).ConfigureAwait(false); // Give async progress time to finish
+        await Task.Delay(1000, cancellationToken).ConfigureAwait(false); // Give the async progress some time to finish
 
         await DeployAddonsAsync(deployFolder, configData.TargetFolder, cancellationToken).ConfigureAwait(false);
-
 
         return new DomainLogicResult(updatedAddons, durationInMilliseconds);
     }
@@ -80,8 +80,6 @@ public sealed class DomainLogicDefault(ILogger logger, IConfigReader configReade
 
         return configData;
     }
-
-
 
     private async Task<string> CreateFolderStructureAsync(CancellationToken cancellationToken = default)
     {
