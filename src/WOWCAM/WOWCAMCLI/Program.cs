@@ -43,6 +43,7 @@ try
     Console.WriteLine();
 
     Console.WriteLine("Have a nice day.");
+    if (OperatingSystem.IsMacOS()) Console.WriteLine();
     Environment.Exit(0);
 }
 catch (Exception ex)
@@ -58,11 +59,13 @@ catch (Exception ex)
         Console.WriteLine($"Info: {ex.Message}");
         Console.WriteLine();
         Console.WriteLine("Have a nice day.");
+        if (OperatingSystem.IsMacOS()) Console.WriteLine();
         Environment.Exit(255);
     }
     else
     {
         Console.WriteLine($"Error: {ex.Message}");
+        if (OperatingSystem.IsMacOS()) Console.WriteLine();
         Environment.Exit(1);
     }
 }
