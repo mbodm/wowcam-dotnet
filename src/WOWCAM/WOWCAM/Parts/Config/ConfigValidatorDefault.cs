@@ -2,7 +2,7 @@ using WOWCAM.Parts.Helper;
 
 namespace WOWCAM.Parts.Config;
 
-public sealed class ConfigValidatorDefault() : IConfigValidator
+internal sealed class ConfigValidatorDefault() : IConfigValidator
 {
     public void Validate(ConfigData configData)
     {

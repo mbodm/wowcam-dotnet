@@ -1,4 +1,4 @@
-namespace WOWCAM.Parts.Addons.Processing;
+namespace WOWCAM.Parts.Addons.Core;
 
 // Encapsulates the entire progress handling for the IAddonsProcessor default implementation,
 // so that class itself stays free of progress math and only calls a few descriptive methods.
@@ -24,7 +24,7 @@ namespace WOWCAM.Parts.Addons.Processing;
 //   The overall percentage is emitted at most ONCE per whole-percent step, counting up.
 //   So the consumer sees "45, 46, 47, ..." instead of "45, 45, 45, 45, 46, 46, 47, ..."
 
-public sealed class ProgressHelper
+internal sealed class ProgressHelper
 {
     private const int DownloadFinishedValue = 100;
     private const int UnzipFinishedValue = 200;

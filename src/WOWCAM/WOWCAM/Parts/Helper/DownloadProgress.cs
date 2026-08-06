@@ -1,3 +1,3 @@
 ﻿namespace WOWCAM.Parts.Helper;
 
-public sealed record DownloadProgress(string Url, bool PreTransfer, long ReceivedBytes, long TotalBytes, bool TransferFinished);
+internal sealed record DownloadProgress(string Url, bool PreTransfer, long ReceivedBytes, long TotalBytes, bool TransferFinished);

@@ -22,12 +22,12 @@ try
         await cts.CancelAsync().ConfigureAwait(false);
     };
 
-    var result = await wowcam.RunAsync(addonNames =>
+    var result = await wowcam.RunAsync(new Progress<IEnumerable<string>>(addonNames =>
     {
         Console.Write($"Processing {addonNames.Count()} addons ...");
         countOfAddons = addonNames.Count();
         needsNewLineOnError = true;
-    },
+    }),
     new Progress<byte>(percent =>
     {
         if (percent % 4 == 0)

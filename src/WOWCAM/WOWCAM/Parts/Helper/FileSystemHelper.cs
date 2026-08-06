@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Helper;
 
-public sealed class FileSystemHelper
+internal sealed class FileSystemHelper
 {
     public static async Task DeleteFolderContentAsync(string folder, CancellationToken cancellationToken = default)
     {

@@ -1,8 +1,8 @@
-﻿namespace WOWCAM.Parts.Core;
+﻿namespace WOWCAM.Parts.Abstractions;
 
-public sealed class HttpClientProviderDefault : IHttpClientProvider
+internal sealed class HttpClientProviderDefault : IHttpClientProvider
 {
-    // This is an abstraction for DI (since Microsoft offers no IHttpClient) and also configures the HttpClient
+    // This is an abstraction for DI (since Microsoft offers no IHttpClient) and we also configure the HttpClient here
 
     private readonly HttpClient httpClient;
 

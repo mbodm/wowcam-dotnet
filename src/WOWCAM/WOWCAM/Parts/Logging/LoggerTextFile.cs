@@ -4,7 +4,7 @@ using WOWCAM.Parts.Extensions;
 
 namespace WOWCAM.Parts.Logging;
 
-public sealed class LoggerTextFile : ILogger
+internal sealed class LoggerTextFile : ILogger
 {
     private readonly object syncRoot = new();
     private readonly string newLine = Environment.NewLine;

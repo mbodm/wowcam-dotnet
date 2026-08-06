@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Helper;
 
-public sealed class CurseHelper
+internal sealed class CurseHelper
 {
     public static bool IsAddonPageUrl(string url)
     {

@@ -2,7 +2,7 @@ using System.Xml.Linq;
 
 namespace WOWCAM.Parts.Config;
 
-public sealed class ConfigReaderXmlFile(string xmlFile) : IConfigReader
+internal sealed class ConfigReaderXmlFile(string xmlFile) : IConfigReader
 {
     private readonly string xmlFile = xmlFile;
 
@@ -10,6 +10,12 @@ public sealed class ConfigReaderXmlFile(string xmlFile) : IConfigReader
 
     public async Task<ConfigData> ReadAsync(CancellationToken cancellationToken = default)
     {
+        if (!File.Exists(xmlFile))
+        {
+            var fileName = Path.GetFileName(xmlFile);
+            throw new InvalidOperationException($"Could not found config file ({fileName}).");
+        }
+
         using var fileStream = new FileStream(xmlFile, FileMode.Open, FileAccess.Read, FileShare.Read);
         var doc = await XDocument.LoadAsync(fileStream, LoadOptions.None, cancellationToken).ConfigureAwait(false);
 

@@ -1,6 +1,6 @@
-﻿namespace WOWCAM.Parts.Addons.Processing;
+﻿namespace WOWCAM.Parts.Addons.Core;
 
-public interface IAddonsProcessor
+internal interface IAddonsProcessor
 {
     Task<int> ProcessAddonsAsync(IEnumerable<string> addonNames, string workFolder, string targetFolder,
         IProgress<byte>? progress = default, CancellationToken cancellationToken = default);

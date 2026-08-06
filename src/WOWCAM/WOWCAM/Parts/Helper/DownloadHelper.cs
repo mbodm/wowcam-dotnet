@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Helper;
 
-public sealed class DownloadHelper
+internal sealed class DownloadHelper
 {
     private const long MaxFileSize = 2L * 1024 * 1024 * 1024; // 2 GB
 

@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using WOWCAM.Parts.Core;
+using WOWCAM.Parts.Abstractions;
 
 namespace WOWCAM.Parts.Addons.ApiClient;
 
-public sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) : IApiClient
+internal sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) : IApiClient
 {
     private readonly IHttpClientProvider httpClientProvider = httpClientProvider ?? throw new ArgumentNullException(nameof(httpClientProvider));
 

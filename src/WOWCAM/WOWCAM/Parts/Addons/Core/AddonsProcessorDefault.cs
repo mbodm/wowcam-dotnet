@@ -3,9 +3,9 @@ using WOWCAM.Parts.Addons.Curse;
 using WOWCAM.Parts.Addons.SmartUpdate;
 using WOWCAM.Parts.Helper;
 
-namespace WOWCAM.Parts.Addons.Processing;
+namespace WOWCAM.Parts.Addons.Core;
 
-public sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch serverFetch, ISmartUpdate smartUpdate) : IAddonsProcessor
+internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch serverFetch, ISmartUpdate smartUpdate) : IAddonsProcessor
 {
     private readonly IApiClient apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
     private readonly IServerFetch serverFetch = serverFetch ?? throw new ArgumentNullException(nameof(serverFetch));

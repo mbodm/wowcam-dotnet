@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Addons.ApiClient;
 
-public interface IApiClient
+internal interface IApiClient
 {
     string ApiToken { get; set; }
 

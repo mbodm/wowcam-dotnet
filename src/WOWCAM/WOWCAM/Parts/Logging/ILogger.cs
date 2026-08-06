@@ -2,7 +2,7 @@
 
 namespace WOWCAM.Parts.Logging;
 
-public interface ILogger
+internal interface ILogger
 {
     string StorageInformation { get; } // Using such a generic term here since this could be a file/database/whatever
 

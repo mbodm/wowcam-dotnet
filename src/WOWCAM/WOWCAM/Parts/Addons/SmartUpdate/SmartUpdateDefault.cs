@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Addons.SmartUpdate;
 
-public sealed class SmartUpdateDefault : ISmartUpdate
+internal sealed class SmartUpdateDefault : ISmartUpdate
 {
     public bool AddonExists(string addonName, string downloadUrl)
     {

@@ -1,6 +1,6 @@
 ﻿namespace WOWCAM.Parts.Addons.SmartUpdate;
 
-public interface ISmartUpdate
+internal interface ISmartUpdate
 {
     Task<int> LoadAsync(CancellationToken cancellationToken = default);
     Task SaveAsync(CancellationToken cancellationToken = default);

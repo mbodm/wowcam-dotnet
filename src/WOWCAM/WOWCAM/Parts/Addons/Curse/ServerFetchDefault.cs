@@ -1,9 +1,9 @@
-﻿using WOWCAM.Parts.Core;
+﻿using WOWCAM.Parts.Abstractions;
 using WOWCAM.Parts.Helper;
 
 namespace WOWCAM.Parts.Addons.Curse;
 
-public sealed class ServerFetchDefault(IHttpClientProvider httpClientProvider) : IServerFetch
+internal sealed class ServerFetchDefault(IHttpClientProvider httpClientProvider) : IServerFetch
 {
     private readonly IHttpClientProvider httpClientProvider = httpClientProvider ?? throw new ArgumentNullException(nameof(httpClientProvider));
 
