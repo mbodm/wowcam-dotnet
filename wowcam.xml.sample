@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ========================================================================= -->
-<!-- Please have a look at https://github.com/mbodm/wowcam-cli for file format -->
-<!-- ========================================================================= -->
+<!-- ============================================================================ -->
+<!-- Please have a look at https://github.com/mbodm/wowcam-dotnet for file format -->
+<!-- ============================================================================ -->
 <wowcam>
 	<general>
 		<profile>retail</profile>

@@ -9,9 +9,21 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
+		<!--<PublishAot>true</PublishAot>-->
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<!--NON-AOT-->
+		<SelfContained>true</SelfContained>
+		<PublishSingleFile>true</PublishSingleFile>
+		<PublishReadyToRun>false</PublishReadyToRun>
+		<!--Size-->
+		<DebugType>none</DebugType>
+		<EventSourceSupport>false</EventSourceSupport>
+	</PropertyGroup>
+
+	<PropertyGroup>
 		<Version>1.0.0</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-		<AssemblyName>WowcamWinUI</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
