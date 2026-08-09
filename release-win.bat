@@ -5,7 +5,7 @@ cls
 echo.
 echo WOWCAM build script 1.0.0 (by MBODM 08/2026)
 echo.
-echo Performing the following 4 steps now:
+echo Performing the following 4 steps:
 echo.
 echo 1) clean projects
 echo 2) dotnet publish
