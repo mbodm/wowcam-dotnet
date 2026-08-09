@@ -1,0 +1,6 @@
+namespace WOWCAM.Core.Parts.Config;
+
+internal interface IConfigValidator
+{
+    void Validate(ConfigData configData);
+}

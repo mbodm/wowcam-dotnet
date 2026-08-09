@@ -1,5 +1,7 @@
 <Solution>
+  <Project Path="WOWCAM.Core/WOWCAM.Core.csproj" />
+  <Project Path="WOWCAM.Helper/WOWCAM.Helper.csproj" Id="e025d063-1f52-4986-ac8b-b46576ed7e74" />
+  <Project Path="WOWCAM.Update/WOWCAM.Update.csproj" />
+  <Project Path="WOWCAM.Windows/WOWCAM.Windows.csproj" />
   <Project Path="WOWCAM/WOWCAM.csproj" />
-  <Project Path="WOWCAMCLI/WOWCAMCLI.csproj" />
-  <Project Path="WOWCAMWINUI/WOWCAMWINUI.csproj" />
 </Solution>
