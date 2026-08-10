@@ -8,15 +8,15 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<!--<PublishAot>true</PublishAot>-->
+		<!-- <PublishAot>true</PublishAot> -->
 		<InvariantGlobalization>true</InvariantGlobalization>
-		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-		<!--NON-AOT-->
+		<RuntimeIdentifiers>win-x64;osx-arm64</RuntimeIdentifiers>
+		<!-- NON-AOT -->
 		<SelfContained>true</SelfContained>
 		<PublishSingleFile>true</PublishSingleFile>
 		<PublishTrimmed>true</PublishTrimmed>
 		<PublishReadyToRun>false</PublishReadyToRun>
-		<!--Size-->
+		<!-- Size -->
 		<DebugType>none</DebugType>
 		<EventSourceSupport>false</EventSourceSupport>
 	</PropertyGroup>
@@ -31,7 +31,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\wowcam.xml.sample" Link="wowcam.xml">
+		<None Condition="'$(RuntimeIdentifier)' == 'win-x64'"
+			Include="..\..\..\wowcam.xml.sample-win" Link="wowcam.xml">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Condition="'$(RuntimeIdentifier)' == 'osx-arm64'"
+			Include="..\..\..\wowcam.xml.sample-mac" Link="wowcam.xml">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
