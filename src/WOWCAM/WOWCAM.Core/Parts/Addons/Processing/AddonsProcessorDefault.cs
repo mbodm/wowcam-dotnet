@@ -49,6 +49,8 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
         var deployFolder = Path.Combine(unzipFolder, "All");
         Directory.CreateDirectory(deployFolder);
 
+        await smartUpdate.LoadAsync(cancellationToken).ConfigureAwait(false);
+
         var addons = await apiClient.GetAddonDownloadUrlsAsync(addonNames, cancellationToken).ConfigureAwait(false);
         if (!addons.Any())
         {
@@ -56,8 +58,6 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
         }
 
         var progressHelper = new ProgressHelper(addons.Count(), progress);
-
-        //await smartUpdate.LoadAsync(cancellationToken).ConfigureAwait(false);
 
         // Concurrently do for every addon -> "Use SmartUpdate" OR "Download & Unzip"
 
@@ -68,11 +68,12 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
             var addonName = addon.AddonSlug;
             var downloadUrl = addon.DownloadUrl;
 
-            if (smartUpdate.AddonExists(addonName, downloadUrl))
+            var noUpdateNeeded = await smartUpdate.AddonAlreadyExistsAsync(addonName, downloadUrl, cancellationToken).ConfigureAwait(false);
+            if (noUpdateNeeded)
             {
                 // SmartUpdate
 
-                await smartUpdate.DeployAddonAsync(addonName, deployFolder).ConfigureAwait(false);
+                await smartUpdate.DeployExistingAddonAsync(addonName, deployFolder).ConfigureAwait(false);
 
                 progressHelper.ReportUnzipFinished(index);
             }
@@ -90,7 +91,7 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
                 var zipContentFolder = await serverFetch.UnzipAddonAsync(zipFilePath, unzipFolder, cancellationToken).ConfigureAwait(false);
                 progressHelper.ReportUnzipFinished(index);
 
-                //smartUpdate.AddOrUpdateAddon(addonName, downloadUrl);
+                await smartUpdate.AddOrUpdateEntryAsync(addonName, downloadUrl, zipContentFolder, cancellationToken).ConfigureAwait(false);
 
                 await FileSystemHelper.CopyFolderContentAsync(zipContentFolder, deployFolder, cancellationToken).ConfigureAwait(false);
 
@@ -107,14 +108,14 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
         //    await task.ConfigureAwait(false);
         //}
 
-        // await smartUpdate.SaveAsync(cancellationToken).ConfigureAwait(false);
-
         // Give the last addon's async progress (for i.e. UI updates) some time to finish
         // Give the last addon's file I/O (cause of i.e. virus scanner) some time to finish
         await Task.Delay(1500, cancellationToken).ConfigureAwait(false);
 
         await FileSystemHelper.DeleteFolderContentAsync(targetFolder, cancellationToken).ConfigureAwait(false);
         await FileSystemHelper.MoveFolderContentAsync(deployFolder, targetFolder, cancellationToken).ConfigureAwait(false);
+
+        await smartUpdate.SaveAsync(cancellationToken).ConfigureAwait(false);
 
         return updatedAddonsCounter;
     }

@@ -27,7 +27,7 @@ public sealed class DomainLogicWowcam : IDomainLogic
         var httpClientProvider = new HttpClientProviderDefault(httpClient);
         var apiClient = new ApiClientDefault(httpClientProvider);
         var serverFetch = new ServerFetchDefault(httpClientProvider);
-        var smartUpdate = new SmartUpdateDefault();
+        var smartUpdate = new SmartUpdateDefault(workFolder);
         var addonsProcessing = new AddonsProcessorDefault(apiClient, serverFetch, smartUpdate);
 
         domainLogic = new DomainLogicDefault(workFolder, logger, configReader, configValidator, apiClient, addonsProcessing);
