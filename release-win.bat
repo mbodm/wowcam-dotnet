@@ -1,9 +1,7 @@
 @echo off
 
-cls
-
 echo.
-echo WOWCAM build script 1.0.0 (by MBODM 08/2026)
+echo WOWCAM (win-x64) build script 1.0.0 (by MBODM 08/2026)
 echo.
 echo Performing the following 4 steps:
 echo.

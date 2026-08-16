@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ============================================================================ -->
+<!-- Please have a look at https://github.com/mbodm/wowcam-dotnet for file format -->
+<!-- ============================================================================ -->
+<wowcam>
+	<general>
+		<profile>retail</profile>
+		<token>12345</token>
+	</general>
+	<profiles>
+		<retail>
+			<!-- <folder>/Applications/World of Warcraft/_retail_/Interface/AddOns</folder> -->
+			<folder>/Users/Marcel/Desktop/wowcam-target-folder</folder>
+			<addons>
+				<url>https://www.curseforge.com/wow/addons/details</url>
+				<url>https://www.curseforge.com/wow/addons/raiderio</url>
+				<url>https://www.curseforge.com/wow/addons/tomtom</url>
+				<url>https://www.curseforge.com/wow/addons/weakauras-2</url>
+			</addons>
+		</retail>
+	</profiles>
+</wowcam>
