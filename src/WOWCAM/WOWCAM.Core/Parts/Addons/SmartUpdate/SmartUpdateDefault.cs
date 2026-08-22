@@ -13,9 +13,6 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
     // Class-internal type
     private sealed record SmartUpdateData(string AddonName, string DownloadUrl, string FolderHash, string TimeStamp);
 
-    // CTOR-injected fields
-    private readonly string workFolder = workFolder ?? throw new ArgumentNullException(nameof(workFolder));
-
     // Class-internal fields
     private readonly ConcurrentDictionary<string, SmartUpdateData> dict = new();
     private readonly string rootFolder = Path.Combine(workFolder, "SmartUpdate");
@@ -97,35 +94,12 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
         await doc.SaveAsync(xmlWriter, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<bool> AddonAlreadyExistsAsync(string addonName, string downloadUrl, CancellationToken cancellationToken = default)
+    public async Task CacheAddonAsync(string addonName, string downloadUrl, string unzippedAddonContentFolder, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(addonName);
         ArgumentException.ThrowIfNullOrWhiteSpace(downloadUrl);
 
-        if (!dict.TryGetValue(addonName, out SmartUpdateData? value) || value == null)
-        {
-            return false;
-        }
-
-        var hasExactAddonName = value.AddonName.Trim().Equals(addonName.Trim(), StringComparison.CurrentCultureIgnoreCase);
-        var hasExactDownloadUrl = value.DownloadUrl.Trim().Equals(downloadUrl.Trim(), StringComparison.CurrentCultureIgnoreCase);
-        var hasExactAddonVersion = hasExactAddonName && hasExactDownloadUrl;
-
-        var cachedAddonFolder = GetCachedAddonFolderPath(value.DownloadUrl);
-        var cachedAddonFolderExists = Directory.Exists(cachedAddonFolder);
-
-        var cachedAddonFolderHash = CreateCachedAddonFolderHashAsync(value.DownloadUrl, cancellationToken).GetAwaiter().GetResult();
-        var folderHashIsCorrect = cachedAddonFolderHash == value.FolderHash;
-
-        return hasExactAddonVersion && cachedAddonFolderExists && folderHashIsCorrect;
-    }
-
-    public async Task AddOrUpdateEntryAsync(string addonName, string downloadUrl, string unzippedAddonSourceFolder, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(addonName);
-        ArgumentException.ThrowIfNullOrWhiteSpace(downloadUrl);
-
-        var addonExists = await AddonAlreadyExistsAsync(addonName, downloadUrl, cancellationToken).ConfigureAwait(false);
+        var addonExists = await AddonAlreadyCachedAsync(addonName, downloadUrl, cancellationToken).ConfigureAwait(false);
         if (addonExists)
         {
             return;
@@ -160,7 +134,7 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
             await FileSystemHelper.DeleteFolderContentAsync(cachedAddonFolder, cancellationToken).ConfigureAwait(false);
         }
 
-        await FileSystemHelper.CopyFolderContentAsync(unzippedAddonSourceFolder, cachedAddonFolder, cancellationToken).ConfigureAwait(false);
+        await FileSystemHelper.CopyFolderContentAsync(unzippedAddonContentFolder, cachedAddonFolder, cancellationToken).ConfigureAwait(false);
 
         // Add new entry to dict
 
@@ -171,9 +145,57 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
         dict.AddOrUpdate(addonName, dictValue, (_, _) => dictValue);
     }
 
-    public Task DeployExistingAddonAsync(string addonName, string destFolder, CancellationToken cancellationToken = default)
+    public async Task<bool> AddonAlreadyCachedAsync(string addonName, string downloadUrl, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        ArgumentException.ThrowIfNullOrWhiteSpace(addonName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(downloadUrl);
+
+        if (!dict.TryGetValue(addonName, out SmartUpdateData? value) || value == null)
+        {
+            return false;
+        }
+
+        var hasExactAddonName = value.AddonName.Trim().Equals(addonName.Trim(), StringComparison.CurrentCultureIgnoreCase);
+        var hasExactDownloadUrl = value.DownloadUrl.Trim().Equals(downloadUrl.Trim(), StringComparison.CurrentCultureIgnoreCase);
+        var hasExactAddonVersion = hasExactAddonName && hasExactDownloadUrl;
+
+        var cachedAddonFolder = GetCachedAddonFolderPath(value.DownloadUrl);
+        var cachedAddonFolderExists = Directory.Exists(cachedAddonFolder);
+
+        var cachedAddonFolderHash = CreateCachedAddonFolderHashAsync(value.DownloadUrl, cancellationToken).GetAwaiter().GetResult();
+        var folderHashIsCorrect = cachedAddonFolderHash == value.FolderHash;
+
+        return hasExactAddonVersion && cachedAddonFolderExists && folderHashIsCorrect;
+    }
+
+    public async Task DeployCachedAddonAsync(string addonName, string destFolder, CancellationToken cancellationToken = default)
+    {
+        if (!dict.TryGetValue(addonName, out SmartUpdateData? value) || value == null)
+        {
+            throw new InvalidOperationException("SmartUpdate could not found an existing entry for given addon name.");
+        }
+
+        var cachedAddonFolder = GetCachedAddonFolderPath(value.DownloadUrl);
+        if (!Directory.Exists(cachedAddonFolder))
+        {
+            throw new InvalidOperationException("SmartUpdate cached-addon deployment failed, because the cached-addon folder does not exist.");
+        }
+
+
+
+
+        if (string.IsNullOrWhiteSpace(zipName))
+        {
+            throw new InvalidOperationException("SmartUpdate could not determine the zip name for given addon name.");
+        }
+
+        var addonFolder = Path.Combine(smartUpdateFolder, "PreviousAddons", zipName);
+        if (!Directory.Exists(addonFolder))
+        {
+            throw new InvalidOperationException("SmartUpdate could not found an existing addon folder for given addon name.");
+        }
+
+        await FileSystemHelper.CopyFolderContentAsync(cachedAddonFolder, destFolder).ConfigureAwait(false);
     }
 
     private string GetCachedAddonFolderPath(string downloadUrl)
@@ -201,7 +223,7 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
         var cachedAddonFolder = GetCachedAddonFolderPath(downloadUrl);
         if (!Directory.Exists(cachedAddonFolder))
         {
-            // Todo: Throw
+            throw new InvalidOperationException("Creating folder hash failed, because the cached-addon folder does not exist.");
         }
 
         return await ComputeFolderHashAsync(cachedAddonFolder, cancellationToken).ConfigureAwait(false);
