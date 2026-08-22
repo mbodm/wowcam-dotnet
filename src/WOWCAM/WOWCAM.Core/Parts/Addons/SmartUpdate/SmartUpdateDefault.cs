@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
@@ -11,7 +12,7 @@ namespace WOWCAM.Core.Parts.Addons.SmartUpdate;
 internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
 {
     // Class-internal type
-    private sealed record SmartUpdateData(string AddonName, string DownloadUrl, string FolderHash, string TimeStamp);
+    private sealed record SmartUpdateData(string AddonName, string DownloadUrl, string TimeStamp);
 
     // Class-internal fields
     private readonly ConcurrentDictionary<string, SmartUpdateData> dict = new();
@@ -39,55 +40,69 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
             throw new InvalidOperationException("Could not load SmartUpdate file (the file is either empty or not a valid XML file).", e);
         }
 
-        var root = doc.Element("wowcam") ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <wowcam> root element not exists).");
-        var parent = root.Element("smartupdate") ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <smartupdate> section not exists).");
+        var root = doc.Element("wowcam")
+            ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <wowcam> root element does not exist).");
+        var parent = root.Element("smartUpdate")
+            ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <smartUpdate> element does not exist).");
+        var hash = parent.Element("cacheFolderHash")
+            ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <cacheFolderHash> element does not exist).");
+        var entries = parent.Element("cacheEntries")
+            ?? throw new InvalidOperationException("Invalid SmartUpdate file (the <cacheEntries> element does not exist).");
 
-        var entries = parent.Elements("entry");
-        foreach (var entry in entries)
+        var cacheFolderHashOld = hash.Value;
+        var cacheFolderHashNow = await ComputeCacheFolderHashAsync(cancellationToken).ConfigureAwait(false);
+        if (!cacheFolderHashOld.Trim().Equals(cacheFolderHashNow.Trim(), StringComparison.CurrentCultureIgnoreCase))
         {
-            var addonName = entry?.Attribute("addonName")?.Value ?? string.Empty;
-            var downloadUrl = entry?.Attribute("downloadUrl")?.Value ?? string.Empty;
-            var folderHash = entry?.Attribute("folderHash")?.Value ?? string.Empty;
-            var changedAt = entry?.Attribute("changedAt")?.Value ?? string.Empty;
+            throw new InvalidOperationException("The SmartUpdate cache folder is corrupted (just delete SmartUpdate folder to solve this issue).");
+        }
 
-            if (string.IsNullOrWhiteSpace(addonName) || string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(folderHash) || string.IsNullOrWhiteSpace(changedAt))
+        var cacheEntryElements = entries.Elements("cacheEntry");
+        foreach (var cacheEntry in cacheEntryElements)
+        {
+            var addonName = cacheEntry?.Element("addonName")?.Value;
+            var downloadUrl = cacheEntry?.Element("downloadUrl")?.Value;
+            var changedAt = cacheEntry?.Element("changedAt")?.Value;
+
+            if (string.IsNullOrWhiteSpace(addonName) ||
+                string.IsNullOrWhiteSpace(downloadUrl) ||
+                string.IsNullOrWhiteSpace(changedAt))
             {
-                throw new InvalidOperationException("Invalid SmartUpdate file (the <smartupdate> section contains one or more invalid entries).");
+                throw new InvalidOperationException("Invalid SmartUpdate file (one or more <cacheEntry> elements are not valid).");
             }
 
-            var zipContentFolderPath = GetCachedAddonFolderPath(downloadUrl);
-            if (!Directory.Exists(zipContentFolderPath))
+            var cachedAddonFolder = GetCachedAddonFolderPath(downloadUrl);
+            if (!Directory.Exists(cachedAddonFolder))
             {
-                throw new InvalidOperationException("Invalid SmartUpdate file (the XML file and the corresponding zip content folder are not in sync).");
+                throw new InvalidOperationException("Invalid SmartUpdate file (one ore more <cacheEntry> elements are not in sync with the cache folder content).");
             }
 
-            //var actualFolderHash = await CreateZipContentFolderHashAsync(zipContentFolderPath, cancellationToken).ConfigureAwait(false);
-            //if (actualFolderHash != folderHash)
-            //{
-            //    throw new InvalidOperationException("The existing zip content folder is corrupted (hash is not equal to hash in XML file).");
-            //}
-
-            if (!dict.TryAdd(addonName, new SmartUpdateData(addonName, downloadUrl, folderHash, changedAt)))
+            if (!dict.TryAdd(addonName, new SmartUpdateData(addonName, downloadUrl, changedAt)))
             {
-                throw new InvalidOperationException("Invalid SmartUpdate file (the <smartupdate> section contains multiple entries for the same addon.");
+                throw new InvalidOperationException("Invalid SmartUpdate file (the <cacheEntries> element contains multiple <cacheEntry> elements for the same addon).");
             }
         }
 
-        return entries.Count();
+        return cacheEntryElements.Count();
     }
 
     public async Task SaveAsync(CancellationToken cancellationToken = default)
     {
-        var entries = dict.OrderBy(kvp => kvp.Key).Select(kvp => new XElement("entry",
-            new XAttribute("addonName", kvp.Key),
-            new XAttribute("downloadUrl", kvp.Value.DownloadUrl),
-            new XAttribute("folderHash", kvp.Value.FolderHash),
-            new XAttribute("changedAt", kvp.Value.TimeStamp)));
+        var cacheFolderHash = await ComputeCacheFolderHashAsync(cancellationToken).ConfigureAwait(false);
 
-        var doc = new XDocument(new XElement("wowcam", new XElement("smartupdate", entries)));
+        var cacheEntries = dict.OrderBy(kvp => kvp.Key).Select(kvp => new XElement("addon",
+            new XElement("name", kvp.Key),
+            new XElement("downloadUrl", kvp.Value.DownloadUrl),
+            new XElement("changedAt", kvp.Value.TimeStamp)));
+
+        var doc = new XDocument(
+            new XElement("wowcam",
+                new XElement("smartUpdate",
+                    new XElement("cache", cacheEntries,
+                    new XAttribute("hash", cacheFolderHash)))));
 
         using var fileStream = new FileStream(xmlFile, FileMode.Create, FileAccess.Write, FileShare.Read);
-        using var xmlWriter = XmlWriter.Create(fileStream, new XmlWriterSettings { Indent = true, IndentChars = "\t", NewLineOnAttributes = true, Async = true });
+        using var xmlWriter = XmlWriter.Create(fileStream, new XmlWriterSettings { Indent = true, IndentChars = "\t", Async = true });
+
         await xmlWriter.FlushAsync().ConfigureAwait(false);
         await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
@@ -138,10 +153,7 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
 
         // Add new entry to dict
 
-        var folderHash = await ComputeFolderHashAsync(cachedAddonFolder, cancellationToken).ConfigureAwait(false);
-        var timeStamp = DateTime.UtcNow.ToIso8601();
-
-        var dictValue = new SmartUpdateData(addonName, downloadUrl, folderHash, timeStamp);
+        var dictValue = new SmartUpdateData(addonName, downloadUrl, DateTime.UtcNow.ToIso8601());
         dict.AddOrUpdate(addonName, dictValue, (_, _) => dictValue);
     }
 
@@ -157,18 +169,14 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
 
         var hasExactAddonName = value.AddonName.Trim().Equals(addonName.Trim(), StringComparison.CurrentCultureIgnoreCase);
         var hasExactDownloadUrl = value.DownloadUrl.Trim().Equals(downloadUrl.Trim(), StringComparison.CurrentCultureIgnoreCase);
-        var hasExactAddonVersion = hasExactAddonName && hasExactDownloadUrl;
 
         var cachedAddonFolder = GetCachedAddonFolderPath(value.DownloadUrl);
         var cachedAddonFolderExists = Directory.Exists(cachedAddonFolder);
 
-        var cachedAddonFolderHash = CreateCachedAddonFolderHashAsync(value.DownloadUrl, cancellationToken).GetAwaiter().GetResult();
-        var folderHashIsCorrect = cachedAddonFolderHash == value.FolderHash;
-
-        return hasExactAddonVersion && cachedAddonFolderExists && folderHashIsCorrect;
+        return hasExactAddonName && hasExactDownloadUrl && cachedAddonFolderExists;
     }
 
-    public async Task DeployCachedAddonAsync(string addonName, string destFolder, CancellationToken cancellationToken = default)
+    public Task DeployCachedAddonAsync(string addonName, string destFolder, CancellationToken cancellationToken = default)
     {
         if (!dict.TryGetValue(addonName, out SmartUpdateData? value) || value == null)
         {
@@ -178,24 +186,10 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
         var cachedAddonFolder = GetCachedAddonFolderPath(value.DownloadUrl);
         if (!Directory.Exists(cachedAddonFolder))
         {
-            throw new InvalidOperationException("SmartUpdate cached-addon deployment failed, because the cached-addon folder does not exist.");
+            throw new InvalidOperationException("SmartUpdate deployment failed, because the cache folder does not contain the addon.");
         }
 
-
-
-
-        if (string.IsNullOrWhiteSpace(zipName))
-        {
-            throw new InvalidOperationException("SmartUpdate could not determine the zip name for given addon name.");
-        }
-
-        var addonFolder = Path.Combine(smartUpdateFolder, "PreviousAddons", zipName);
-        if (!Directory.Exists(addonFolder))
-        {
-            throw new InvalidOperationException("SmartUpdate could not found an existing addon folder for given addon name.");
-        }
-
-        await FileSystemHelper.CopyFolderContentAsync(cachedAddonFolder, destFolder).ConfigureAwait(false);
+        return FileSystemHelper.CopyFolderContentAsync(cachedAddonFolder, destFolder, cancellationToken);
     }
 
     private string GetCachedAddonFolderPath(string downloadUrl)
@@ -205,28 +199,30 @@ internal sealed class SmartUpdateDefault(string workFolder) : ISmartUpdate
             Directory.CreateDirectory(rootFolder);
         }
 
-        var addonsFolder = Path.Combine(rootFolder, "Addons");
-        if (Directory.Exists(addonsFolder))
+        var cacheFolder = Path.Combine(rootFolder, "Addons");
+        if (Directory.Exists(cacheFolder))
         {
-            Directory.CreateDirectory(addonsFolder);
+            Directory.CreateDirectory(cacheFolder);
         }
 
         var zipFileName = CurseHelper.GetZipFileNameFromAddonDownloadUrl(downloadUrl);
         var cachedAddonFolderName = Path.GetFileNameWithoutExtension(zipFileName);
-        var cachedAddonFolderPath = Path.Combine(addonsFolder, cachedAddonFolderName);
+        var cachedAddonFolderPath = Path.Combine(cacheFolder, cachedAddonFolderName);
 
         return cachedAddonFolderPath;
     }
 
-    private async Task<string> CreateCachedAddonFolderHashAsync(string downloadUrl, CancellationToken cancellationToken = default)
+    private async Task<string> ComputeCacheFolderHashAsync(CancellationToken cancellationToken = default)
     {
-        var cachedAddonFolder = GetCachedAddonFolderPath(downloadUrl);
-        if (!Directory.Exists(cachedAddonFolder))
-        {
-            throw new InvalidOperationException("Creating folder hash failed, because the cached-addon folder does not exist.");
-        }
+        var cacheFolder = GetCacheFolder();
+        var cacheFolderHash = await ComputeFolderHashAsync(cacheFolder, cancellationToken).ConfigureAwait(false);
 
-        return await ComputeFolderHashAsync(cachedAddonFolder, cancellationToken).ConfigureAwait(false);
+        return cacheFolderHash;
+    }
+
+    private string GetCacheFolder()
+    {
+        return Path.Combine(rootFolder, "Addons");
     }
 
     private static async Task<string> ComputeFolderHashAsync(string folderPath, CancellationToken cancellationToken = default)
