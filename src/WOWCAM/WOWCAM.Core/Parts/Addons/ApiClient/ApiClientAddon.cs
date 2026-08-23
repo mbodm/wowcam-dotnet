@@ -1,3 +1,3 @@
 ﻿namespace WOWCAM.Core.Parts.Addons.ApiClient;
 
-internal sealed record ApiClientAddon(string AddonSlug, string DownloadUrl);
+internal sealed record ApiClientAddon(string AddonSlug, string DownloadUrl, string CacheUrl);

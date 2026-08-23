@@ -66,7 +66,7 @@ internal sealed class AddonsProcessorDefault(IApiClient apiClient, IServerFetch 
         var tasks = addons.Select(async (addon, index) =>
         {
             var addonName = addon.AddonSlug;
-            var downloadUrl = addon.DownloadUrl;
+            var downloadUrl = addon.CacheUrl;
 
             var noUpdateNeeded = await smartUpdate.AddonAlreadyCachedAsync(addonName, downloadUrl, cancellationToken).ConfigureAwait(false);
             if (noUpdateNeeded)

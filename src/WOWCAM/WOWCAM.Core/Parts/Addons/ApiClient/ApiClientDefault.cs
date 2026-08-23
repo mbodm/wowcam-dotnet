@@ -40,8 +40,9 @@ internal sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) :
         {
             var addonSlug = e.GetProperty("addonSlug").GetString();
             var downloadUrl = e.GetProperty("downloadUrl").GetString();
+            var cacheUrl = e.GetProperty("cacheUrl").GetString();
 
-            if (string.IsNullOrWhiteSpace(addonSlug) || string.IsNullOrWhiteSpace(downloadUrl))
+            if (string.IsNullOrWhiteSpace(addonSlug) || string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(cacheUrl))
             {
                 continue;
             }
@@ -52,7 +53,7 @@ internal sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) :
                 continue;
             }
 
-            result.Add(new ApiClientAddon(addonSlug, downloadUrl));
+            result.Add(new ApiClientAddon(addonSlug, downloadUrl, cacheUrl));
         }
 
         return result;
@@ -77,14 +78,16 @@ internal sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) :
             using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!json.RootElement.TryGetProperty("addonSlug", out JsonElement addonSlugElement) ||
-                !json.RootElement.TryGetProperty("downloadUrl", out JsonElement downloadUrlElement))
+                !json.RootElement.TryGetProperty("downloadUrl", out JsonElement downloadUrlElement) ||
+                !json.RootElement.TryGetProperty("cacheUrl", out JsonElement cacheUrlElement))
             {
                 continue;
             }
 
             var addonSlug = addonSlugElement.GetString();
             var downloadUrl = downloadUrlElement.GetString();
-            if (string.IsNullOrWhiteSpace(addonSlug) || string.IsNullOrWhiteSpace(downloadUrl))
+            var cacheUrl = cacheUrlElement.GetString();
+            if (string.IsNullOrWhiteSpace(addonSlug) || string.IsNullOrWhiteSpace(downloadUrl) || string.IsNullOrWhiteSpace(cacheUrl))
             {
                 continue;
             }
@@ -95,7 +98,7 @@ internal sealed class ApiClientDefault(IHttpClientProvider httpClientProvider) :
                 continue;
             }
 
-            result.Add(new ApiClientAddon(addonSlug, downloadUrl));
+            result.Add(new ApiClientAddon(addonSlug, downloadUrl, cacheUrl));
         }
 
         return result;
